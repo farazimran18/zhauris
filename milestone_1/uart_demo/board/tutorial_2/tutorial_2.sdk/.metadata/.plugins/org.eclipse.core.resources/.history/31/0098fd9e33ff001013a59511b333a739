@@ -1,0 +1,47 @@
+#include "platform.h"
+#include "xil_printf.h"
+#include "xparameters.h"
+#include "xil_types.h"
+#include "xuartlite_l.h"
+
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#define NBYTES 256
+
+static inline u8 uart_getc_blocking(void) {
+    return XUartLite_RecvByte(UART_BASEADDR);
+}
+
+static inline void uart_putc(u8 c) {
+    XUartLite_SendByte(UART_BASEADDR, c);
+}
+
+int main() {
+    init_platform();
+
+    xil_printf("\r\nREADY: send %d bytes\r\n", NBYTES);
+
+    static u8 buf[NBYTES];
+
+    while (1) {
+        // Receive exactly NBYTES
+        for (int i = 0; i < NBYTES; i++) {
+            buf[i] = uart_getc_blocking();
+        }
+
+        // Echo FIRST (binary clean)
+        for (int i = 0; i < NBYTES; i++) {
+            uart_putc(buf[i]);
+        }
+
+        // Now safe to print text
+        u32 sum = 0;
+        for (int i = 0; i < NBYTES; i++) sum += buf[i];
+
+        xil_printf("ECHO done. sum=%lu first16=", (unsigned long)sum);
+        for (int i = 0; i < 16; i++) xil_printf(" %02x", buf[i]);
+        xil_printf("\r\nREADY: send %d bytes\r\n", NBYTES);
+    }
+
+    cleanup_platform();
+    return 0;
+}

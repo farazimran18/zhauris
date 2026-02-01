@@ -1,0 +1,52 @@
+#include "platform.h"
+#include "xil_printf.h"
+#include "xparameters.h"
+#include "xil_types.h"
+
+// UARTLite low-level I/O
+#include "xuartlite_l.h"
+
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+
+static inline u8 uart_getc_blocking(void)
+{
+    // Blocks until a byte arrives
+    return XUartLite_RecvByte(UART_BASEADDR);
+}
+
+static inline void uart_putc(u8 c)
+{
+    XUartLite_SendByte(UART_BASEADDR, c);
+}
+
+static int is_printable(u8 c)
+{
+    return (c >= 32 && c <= 126);
+}
+
+int main()
+{
+    init_platform();
+
+    xil_printf("\r\n--- MicroBlaze UART Base Demo ---\r\n");
+    xil_printf("READY: send a byte from Python/terminal.\r\n");
+    xil_printf("I will print it + echo it back.\r\n\r\n");
+
+    while (1) {
+        u8 c = uart_getc_blocking();
+
+        // Print what we received
+        xil_printf("RX: 0x%02x", c);
+        if (is_printable(c)) {
+            xil_printf(" ('%c')\r\n", c);
+        } else {
+            xil_printf(" (non-printable)\r\n");
+        }
+
+        // Echo back
+        uart_putc(c);
+    }
+
+    cleanup_platform();
+    return 0;
+}

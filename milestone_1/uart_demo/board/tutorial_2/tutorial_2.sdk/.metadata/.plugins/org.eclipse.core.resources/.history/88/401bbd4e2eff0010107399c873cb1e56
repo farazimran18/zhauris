@@ -1,0 +1,49 @@
+#include <stdio.h>
+#include "platform.h"
+#include "xil_printf.h"
+#include "xparameters.h"
+
+volatile unsigned int* led = (unsigned int*) XPAR_GPIO_LED_BASEADDR;
+volatile unsigned int* swt = (unsigned int*) XPAR_GPIO_SWITCH_BASEADDR;
+
+static void delay(volatile unsigned int count)
+{
+    while (count--) {
+        asm volatile ("nop");
+    }
+}
+
+int main()
+{
+    init_platform();
+
+    print("Hello World\n\r");
+
+    unsigned blink_state = 0;
+
+    while (1) {
+        unsigned sw  = *swt;
+        unsigned out = *led;
+
+        // LED0 ON only if BOTH SW0 and SW1 are ON
+        if ( (sw & (1u<<0)) && (sw & (1u<<1)) )
+            out |=  (1u<<0);
+        else
+            out &= ~(1u<<0);
+
+        // LED1 blinks always
+        blink_state ^= 1u;
+        if (blink_state)
+            out |=  (1u<<1);
+        else
+            out &= ~(1u<<1);
+
+        *led = out;
+
+        // adjust this value to change blink rate
+        delay(2000000);
+    }
+
+    cleanup_platform();
+    return 0;
+}
